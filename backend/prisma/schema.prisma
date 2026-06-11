@@ -1,0 +1,185 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  username      String    @unique
+  password      String
+  fullName      String
+  phone         String
+  role          Role      @default(CASHIER)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  sales         Sale[]
+  inventoryLogs InventoryLog[]
+}
+
+model StrategicPartner {
+  id              String    @id @default(uuid())
+  name            String
+  phone           String
+  email           String
+  businessType    String?
+  status          PartnerStatus @default(PENDING)
+  discountRate    Float     @default(0)
+  totalOrders     Int       @default(0)
+  createdAt       DateTime  @default(now())
+  
+  partnerRequests PartnerRequest[]
+}
+
+model PartnerRequest {
+  id              String    @id @default(uuid())
+  partnerId       String
+  serviceType     String    // print, photocopy, refer
+  category        String    // assignments, project, shirt, mug, cap
+  quantity        Int
+  discountPercent Float
+  status          String    @default("pending")
+  createdAt       DateTime  @default(now())
+  
+  partner         StrategicPartner @relation(fields: [partnerId], references: [id])
+}
+
+model ProductCategory {
+  id              String    @id @default(uuid())
+  name            String    @unique
+  description     String?
+  markupPercentage Float    @default(20) // For products
+  isService       Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  
+  products        Product[]
+}
+
+model Product {
+  id              String    @id @default(uuid())
+  name            String
+  sku             String    @unique
+  categoryId      String
+  buyingPrice     Float?
+  sellingPrice    Float
+  stockQuantity   Int       @default(0)
+  reorderLevel    Int       @default(10)
+  unit            String    @default("piece")
+  isService       Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  category        ProductCategory @relation(fields: [categoryId], references: [id])
+  saleItems       SaleItem[]
+  inventoryLogs   InventoryLog[]
+}
+
+model Sale {
+  id              String    @id @default(uuid())
+  receiptNo       String    @unique
+  customerName    String
+  customerPhone   String?
+  userId          String
+  subtotal        Float
+  vat             Float     @default(0)
+  discount        Float     @default(0)
+  total           Float
+  paymentMethod   PaymentMethod
+  mpesaReceipt    String?
+  status          SaleStatus @default(COMPLETED)
+  createdAt       DateTime  @default(now())
+  
+  user            User      @relation(fields: [userId], references: [id])
+  items           SaleItem[]
+}
+
+model SaleItem {
+  id              String    @id @default(uuid())
+  saleId          String
+  productId       String
+  quantity        Int
+  unitPrice       Float
+  total           Float
+  
+  sale            Sale      @relation(fields: [saleId], references: [id])
+  product         Product   @relation(fields: [productId], references: [id])
+}
+
+model InventoryLog {
+  id              String    @id @default(uuid())
+  productId       String
+  userId          String
+  type            InventoryType
+  quantity        Int
+  previousStock   Int
+  newStock        Int
+  note            String?
+  createdAt       DateTime  @default(now())
+  
+  product         Product   @relation(fields: [productId], references: [id])
+  user            User      @relation(fields: [userId], references: [id])
+}
+
+model SystemSetting {
+  id              String    @id @default(uuid())
+  key             String    @unique
+  value           String
+  description     String?
+  updatedAt       DateTime  @updatedAt
+}
+
+model TurnitinOrder {
+  id              String    @id @default(uuid())
+  customerName    String
+  customerEmail   String
+  documentPages   Int
+  serviceType     String    // Turnitin, AI_Check, Both
+  price           Float
+  status          String    @default("pending")
+  createdAt       DateTime  @default(now())
+}
+
+model EditingOrder {
+  id              String    @id @default(uuid())
+  customerName    String
+  customerEmail   String
+  projectType     String    // masters, class
+  editType        String    // full, partial
+  chapters        Int
+  pricePerChapter Float
+  totalPrice      Float
+  status          String    @default("pending")
+  createdAt       DateTime  @default(now())
+}
+
+enum Role {
+  ADMIN
+  CASHIER
+}
+
+enum PaymentMethod {
+  CASH
+  MPESA
+}
+
+enum SaleStatus {
+  COMPLETED
+  REFUNDED
+}
+
+enum InventoryType {
+  STOCK_IN
+  STOCK_OUT
+  ADJUSTMENT
+}
+
+enum PartnerStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
